@@ -1,37 +1,38 @@
-// Checks API example
-// See: https://developer.github.com/v3/checks/ to learn more
+// module.exports = (app) => {
+//   app.on('*', check);
+//   app.log('I was here');
 
-/**
- * This is the main entrypoint to your Probot app
- * @param {import('probot').Application} app
- */
-module.exports = app => {
-  app.on(['check_suite.requested', 'check_run.rerequested'], check)
+//   async function check(context) {
+//     app.on('*', check);
 
-  async function check (context) {
-    const startTime = new Date()
+//     app.log('I was here');
 
-    // Do stuff
-    const { head_branch: headBranch, head_sha: headSha } = context.payload.check_suite
-    // Probot API note: context.repo() => {username: 'hiimbex', repo: 'testing-things'}
-    return context.github.checks.create(context.repo({
-      name: 'My app!',
-      head_branch: headBranch,
-      head_sha: headSha,
-      status: 'completed',
-      started_at: startTime,
-      conclusion: 'success',
-      completed_at: new Date(),
-      output: {
-        title: 'Probot check!',
-        summary: 'The check has passed!'
-      }
-    }))
-  }
+//     const startTime = new Date();
+//     // Do stuff
+//     const { head_branch: headBranch, head_sha: headSha } = context.payload.check_suite;
+//   }
+// };
 
-  // For more information on building apps:
-  // https://probot.github.io/docs/
-
-  // To get your app running against GitHub, see:
-  // https://probot.github.io/docs/development/
-}
+module.exports = (app) => {
+  app.on('check_run.completed', async (context) => {
+    // An issue was opened or edited, what should we do with it?
+    app.log(context.payload.check_run.conclusion);
+    if (
+      context.payload.check_run.conclusion === 'success' &&
+      context.payload.check_run.check_suite.head_branch.indexOf('block-') === 0
+    ) {
+      // Send a request to laxmi about test
+      // we will send the name of block
+      // Laxmi will provide us the name of parent branch in the response
+      app.log(
+        'Github Token: ',
+        await context.github.repos.merge({
+          owner: 'sunnyssr',
+          repo: 'AS-test-repo',
+          base: 'exercise-01',
+          head: context.payload.check_run.check_suite.head_branch,
+        })
+      );
+    }
+  });
+};
